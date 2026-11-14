@@ -1,0 +1,15 @@
+[general]
+name=Telecom RF Tool
+description=Menu and tool dialogs for telecom RF planning in QGIS.
+version=0.7.3
+qgisMinimumVersion=3.22
+qgisMaximumVersion=4.99
+author=EasyCalculator.org
+email=care@easycalculator.org
+homepage=https://easycalculator.org/
+repository=https://github.com/narendraneeraj/Qgis-Plugin-Telecom-RF-Tool
+tracker=https://github.com/narendraneeraj/Qgis-Plugin-Telecom-RF-Tool/issues
+icon=icon.svg
+category=Plugins
+about=Includes Cell Make Azimuth for creating sector polygons from a point layer. Includes site-level LTE PCI planning and cell-level LTE RSI planning. Includes XYZ basemaps and balanced site clustering and Voronoi boundaries. Other tool entries are reserved for later releases.
+experimental=True
