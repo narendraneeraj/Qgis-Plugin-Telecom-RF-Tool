@@ -1,4 +1,4 @@
-# Telecom RF Tool v0.7.3
+# Telecom RF Tool v1.0.1
 
 1. Open **Plugins → Manage and Install Plugins → Install from ZIP** in QGIS.
 2. Select the ZIP and install it.
@@ -127,3 +127,7 @@ path blank for a temporary layer or enter a new GeoPackage filename.
 
 Telecom RF Tool is distributed under GNU GPL version 2. The bundled
 Cluster Generator retains its upstream notice in vendor_generator/LICENSE.
+
+## Release 1.0.1
+
+Experimental metadata is disabled. Every tool and XYZ basemap has its own original SVG icon, based on the supplied visual themes. Best NBR Creator and NBR Selector are visibly disabled until implemented.

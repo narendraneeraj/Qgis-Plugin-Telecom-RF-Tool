@@ -22,6 +22,9 @@ TOOLS = (
     "Far Distance Calculator",
     "Nearest Distance Calculator",
 )
+TOOL_ICONS = {'Site to Cell Converter': 'cell', 'Best NBR Creator': 'best_nbr', 'NBR Selector': 'selector', 'PCI Planning': 'pci', 'RSI Planning': 'rsi', 'Cluster Creator': 'creator', 'Cluster Generator': 'generator', 'Far Distance Calculator': 'far', 'Nearest Distance Calculator': 'near', 'Google Maps (Roads)': 'roads', 'Google Satellite': 'satellite', 'Google Hybrid': 'hybrid', 'OpenStreetMap': 'osm'}
+UNAVAILABLE_TOOLS = {"Best NBR Creator", "NBR Selector"}
+
 BRANDING = (
     'Developed by <a href="https://easycalculator.org/">EasyCalculator.org</a>'
     '<br>Contact us at <a href="mailto:care@easycalculator.org">'
@@ -35,10 +38,16 @@ class TelecomRfTool:
         self.menu = None
         self.icon = QIcon(str(Path(__file__).with_name("icon.svg")))
 
+    def action_icon(self, name):
+        return QIcon(str(Path(__file__).parent / "icons" / (TOOL_ICONS[name] + ".svg")))
+
     def initGui(self):
         self.menu = self.iface.pluginMenu().addMenu(self.icon, "Telecom RF Tool")
         for title in TOOLS:
-            action = QAction(self.icon, title, self.menu)
+            action = QAction(self.action_icon(title), title, self.menu)
+            if title in UNAVAILABLE_TOOLS:
+                action.setEnabled(False)
+                action.setToolTip("Planned for a future release")
             action.triggered.connect(
                 lambda checked=False, tool_title=title: self.show_tool(tool_title)
             )
@@ -46,7 +55,7 @@ class TelecomRfTool:
         self.menu.addSeparator()
         basemaps = self.menu.addMenu(self.icon, "Basemaps")
         for name in BASEMAPS:
-            action = QAction(self.icon, name, basemaps)
+            action = QAction(self.action_icon(name), name, basemaps)
             action.triggered.connect(lambda checked=False, name=name: self.load_basemap(name))
             basemaps.addAction(action)
         about = QAction(self.icon, "About & Contact", self.menu)
@@ -64,6 +73,7 @@ class TelecomRfTool:
             from .site_to_cell import SiteToCellDialog
 
             dialog = SiteToCellDialog(self.iface)
+            dialog.setWindowIcon(self.action_icon(title))
             dialog.exec()
             dialog.deleteLater()
             return
@@ -71,6 +81,7 @@ class TelecomRfTool:
             from .pci_planning import PciPlanningDialog
 
             dialog = PciPlanningDialog(self.iface)
+            dialog.setWindowIcon(self.action_icon(title))
             dialog.exec()
             dialog.deleteLater()
             return
@@ -78,6 +89,7 @@ class TelecomRfTool:
             from .rsi_planning import RsiPlanningDialog
 
             dialog = RsiPlanningDialog(self.iface)
+            dialog.setWindowIcon(self.action_icon(title))
             dialog.exec()
             dialog.deleteLater()
             return
@@ -96,6 +108,7 @@ class TelecomRfTool:
 
             dialog = ClusterCreatorDialog(self.iface)
             dialog.setWindowTitle(title)
+            dialog.setWindowIcon(self.action_icon(title))
             dialog.exec()
             dialog.deleteLater()
             return
@@ -103,6 +116,7 @@ class TelecomRfTool:
             from .distance_calculator import DistanceCalculatorDialog
 
             dialog = DistanceCalculatorDialog(self.iface, title == "Far Distance Calculator")
+            dialog.setWindowIcon(self.action_icon(title))
             dialog.exec()
             dialog.deleteLater()
             return
@@ -115,7 +129,7 @@ class TelecomRfTool:
             QMessageBox.warning(self.iface.mainWindow(), "Basemaps", str(error))
 
     def show_about(self):
-        self.show_dialog("About Telecom RF Tool", "Version 0.7.3 · Same-Attribute Distance Calculators")
+        self.show_dialog("About Telecom RF Tool", "Version 1.0.1 · Telecom RF Tool")
 
     def show_dialog(self, title, message):
         dialog = QMessageBox(self.iface.mainWindow())
