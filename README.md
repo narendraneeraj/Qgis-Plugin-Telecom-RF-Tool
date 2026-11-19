@@ -1,4 +1,4 @@
-# Telecom RF Tool v1.0.1
+# Telecom RF Tool v1.0.5
 
 1. Open **Plugins → Manage and Install Plugins → Install from ZIP** in QGIS.
 2. Select the ZIP and install it.
@@ -128,6 +128,31 @@ path blank for a temporary layer or enter a new GeoPackage filename.
 Telecom RF Tool is distributed under GNU GPL version 2. The bundled
 Cluster Generator retains its upstream notice in vendor_generator/LICENSE.
 
-## Release 1.0.1
+## Release 1.0.5
 
 Experimental metadata is disabled. Every tool and XYZ basemap has its own original SVG icon, based on the supplied visual themes. Best NBR Creator and NBR Selector are visibly disabled until implemented.
+
+Sector overlap adjustment checks positive area overlap between different SiteIDs at the original radius. When enabled, all sectors of both affected sites are regenerated at half the requested radius once. Sectors at the same site are excluded from this check. radius_m records the actual radius. Very close sites may still overlap after reduction.
+
+## Cluster Creator 1.0.5
+
+Input is a point layer with one unique SiteID per location, or a UTF-8 CSV
+with latitude, longitude and SiteID fields. Defaults are minimum group 10,
+inter-site link 2 km, split above 40, split adjustment ±5, boundary buffer 200 m.
+Sites form distance-connected groups. A chain can span more than 2 km.
+Groups below the minimum are excluded and retained with a status in the sites
+output. Oversized groups split into balanced spatial subdivisions, e.g. 41
+becomes 20 and 21 with names CL-01-1 and CL-01-2. Counts remain at or below
+the split threshold. Split adjustment permits shifts around the balanced cut.
+
+Boundaries use the convex hull of each connected group plus the selected
+buffer in a local metric projection, split at spatial midpoints. Boundaries
+may therefore enclose open areas between sites. Collisions between buffered
+groups are partitioned by nearest-site Voronoi cells. Continuity, containment
+and positive-area overlap are checked before output. Settings that cannot
+produce valid continuous boundaries generate an error for adjustment.
+At shared edges the available buffer is clipped to avoid overlap. The tool
+creates both cluster boundaries and sites with cluster names and statuses.
+Each output optionally exports to a new WGS84 GeoJSON.
+
+Co-located sites with distinct SiteIDs are retained and counted separately. They stay in the same final cluster. Voronoi construction uses one seed per unique coordinate.

@@ -104,7 +104,7 @@ class TelecomRfTool:
                     generator.dlg.deleteLater()
             return
         if title == "Cluster Creator":
-            from .cluster_creator import ClusterCreatorDialog
+            from .cluster_advanced import ClusterCreatorDialog
 
             dialog = ClusterCreatorDialog(self.iface)
             dialog.setWindowTitle(title)
@@ -129,7 +129,7 @@ class TelecomRfTool:
             QMessageBox.warning(self.iface.mainWindow(), "Basemaps", str(error))
 
     def show_about(self):
-        self.show_dialog("About Telecom RF Tool", "Version 1.0.1 · Telecom RF Tool")
+        self.show_dialog("About Telecom RF Tool", "Version 1.0.5 · Telecom RF Tool")
 
     def show_dialog(self, title, message):
         dialog = QMessageBox(self.iface.mainWindow())

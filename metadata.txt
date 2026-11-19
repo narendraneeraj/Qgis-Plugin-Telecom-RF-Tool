@@ -1,7 +1,7 @@
 [general]
 name=Telecom RF Tool
 description=Menu and tool dialogs for telecom RF planning in QGIS.
-version=1.0.1
+version=1.0.5
 qgisMinimumVersion=3.22
 qgisMaximumVersion=4.99
 author=EasyCalculator.org

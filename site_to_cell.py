@@ -5,19 +5,19 @@ from pathlib import Path
 from qgis.core import (
     QgsCoordinateReferenceSystem, QgsCoordinateTransform, QgsDistanceArea,
     QgsFeature, QgsField, QgsGeometry, QgsMapLayerProxyModel, QgsPointXY,
-    QgsProject, QgsVectorFileWriter, QgsVectorLayer, QgsWkbTypes,
+    QgsProject, QgsSpatialIndex, QgsVectorFileWriter, QgsVectorLayer, QgsWkbTypes,
 )
 from qgis.gui import QgsFieldComboBox, QgsMapLayerComboBox
 from qgis.PyQt.QtCore import QVariant
 from qgis.PyQt.QtGui import QColor
 from qgis.PyQt.QtWidgets import (
-    QColorDialog, QDialog, QDialogButtonBox, QDoubleSpinBox, QFileDialog,
+    QCheckBox, QColorDialog, QDialog, QDialogButtonBox, QDoubleSpinBox, QFileDialog,
     QFormLayout, QHBoxLayout, QLineEdit, QMessageBox, QPushButton,
 )
 
 
 def create_cells(layer, site_field, azimuth_field, sector_field, beamwidth_field,
-                 default_beamwidth, radius):
+                 default_beamwidth, radius, reduce_overlap=False):
     project = QgsProject.instance()
     crs = QgsCoordinateReferenceSystem("EPSG:4326")
     if not layer.crs().isValid():
@@ -35,6 +35,7 @@ def create_cells(layer, site_field, azimuth_field, sector_field, beamwidth_field
     ])
     output.updateFields()
     seen = set()
+    centers = {}
     for source in layer.getFeatures():
         try:
             if source.geometry().isEmpty() or source.geometry().isMultipart():
@@ -53,6 +54,7 @@ def create_cells(layer, site_field, azimuth_field, sector_field, beamwidth_field
             if abs(center.y()) >= 90:
                 raise ValueError("site is at a geographic pole")
             cells = []
+            centers[site] = center
             for sector, raw_azimuth, raw_width in zip(sectors, azimuths, beamwidths):
                 sector = sector.strip()
                 azimuth = float(raw_azimuth)
@@ -83,6 +85,38 @@ def create_cells(layer, site_field, azimuth_field, sector_field, beamwidth_field
             raise ValueError(f"Input feature {source.id()}: {error}") from error
     if not output.featureCount():
         raise ValueError("The input layer has no sites.")
+    if reduce_overlap:
+        features = {feature.id(): feature for feature in output.getFeatures()}
+        index = QgsSpatialIndex(output.getFeatures())
+        affected = set()
+        for fid, feature in features.items():
+            geometry = feature.geometry()
+            for other_id in index.intersects(geometry.boundingBox()):
+                other = features[other_id]
+                if other_id <= fid or other["site_id"] == feature["site_id"]:
+                    continue
+                if geometry.intersection(other.geometry()).area() > 0:
+                    affected.update((feature["site_id"], other["site_id"]))
+        geometries = {}
+        attributes = {}
+        for fid, feature in features.items():
+            if feature["site_id"] not in affected:
+                continue
+            center = centers[feature["site_id"]]
+            width, azimuth = feature["beamwidth"], feature["azimuth"]
+            steps = max(2, math.ceil(width / 3))
+            ring = [
+                distance.computeSpheroidProject(
+                    center, radius / 2,
+                    math.radians(azimuth - width / 2 + width * step / steps),
+                )
+                for step in range(steps + 1)
+            ]
+            ring = ring[:-1] + [ring[0]] if width == 360 else [center, *ring, center]
+            geometries[fid] = QgsGeometry.fromPolygonXY([ring])
+            attributes[fid] = {output.fields().indexFromName("radius_m"): radius / 2}
+        if not provider.changeGeometryValues(geometries) or not provider.changeAttributeValues(attributes):
+            raise ValueError("Could not update the reduced sector radii.")
     output.updateExtents()
     return output
 
@@ -134,6 +168,13 @@ class SiteToCellDialog(QDialog):
         self.radius.setValue(200)
         self.radius.setSuffix(" m")
         form.addRow("Sector radius", self.radius)
+        self.reduce_overlap = QCheckBox("Halve radius at sites with overlapping sectors")
+        self.reduce_overlap.setChecked(True)
+        self.reduce_overlap.setToolTip(
+            "Checks overlap with other sites at the requested radius, then halves all sectors "
+            "at affected sites once. Very close sites may still overlap."
+        )
+        form.addRow(self.reduce_overlap)
         self.color = QColor()
         self.color_button = QPushButton("Choose color…")
         self.color_button.clicked.connect(self.choose_color)
@@ -179,7 +220,10 @@ class SiteToCellDialog(QDialog):
         try:
             if not layer or not all(fields[:3]):
                 raise ValueError("Select an input point layer and map the SiteID, azimuth and sector fields.")
-            output = create_cells(layer, *fields, self.width.value(), self.radius.value())
+            output = create_cells(
+                layer, *fields, self.width.value(), self.radius.value(),
+                self.reduce_overlap.isChecked(),
+            )
             path = self.path.text().strip()
             if path:
                 output = self.save_geopackage(output, path)
